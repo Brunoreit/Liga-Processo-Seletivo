@@ -4,7 +4,9 @@
 
 A arquitetura do projeto foi planejada para priorizar simplicidade, organização e facilidade de manutenção, sem abrir mão de boas práticas de Engenharia de Software.
 
-O sistema seguirá uma arquitetura cliente-servidor (Client-Server), com uma API REST responsável pelas regras de negócio e uma aplicação web responsável pela interface do usuário.
+O sistema seguirá uma arquitetura cliente-servidor (Client-Server), composta por uma aplicação React responsável pela interface do usuário e uma API REST desenvolvida em Django REST Framework responsável pelas regras de negócio e acesso aos dados.
+
+A arquitetura também busca manter compatibilidade com outros projetos da Liga de TI, facilitando futuras integrações e reutilização de componentes.
 
 ---
 
@@ -13,17 +15,17 @@ O sistema seguirá uma arquitetura cliente-servidor (Client-Server), com uma API
 ```text
                  +----------------------+
                  |      Front-end       |
-                 |  React + TypeScript  |
+                 | React + TypeScript   |
                  +----------+-----------+
                             |
-                        HTTP/REST
+                        HTTP / REST
                             |
                  +----------v-----------+
                  |      Back-end        |
-                 | Java + Spring Boot   |
+                 | Django REST API      |
                  +----------+-----------+
                             |
-                 Spring Data JPA
+                      Django ORM
                             |
                  +----------v-----------+
                  |    PostgreSQL        |
@@ -34,97 +36,126 @@ O sistema seguirá uma arquitetura cliente-servidor (Client-Server), com uma API
 
 ## Architecture Style
 
-O projeto utilizará uma arquitetura em camadas (Layered Architecture), separando responsabilidades entre apresentação, regras de negócio e acesso aos dados.
+O projeto utilizará uma arquitetura em camadas (Layered Architecture), separando responsabilidades entre interface, regras de negócio e persistência de dados.
 
-Essa abordagem facilita a manutenção, os testes e a evolução do sistema.
+Embora o Django já forneça uma estrutura organizada por padrão, o projeto buscará manter uma separação clara entre responsabilidades para facilitar manutenção, testes e evolução do sistema.
+
+Fluxo simplificado de uma requisição:
 
 ```text
 HTTP Request
-    ↓
-Controller
-    ↓
-Service
-    ↓
-Repository
-    ↓
-Database
+      ↓
+APIView / ViewSet
+      ↓
+Service (Business Rules)
+      ↓
+Model / ORM
+      ↓
+PostgreSQL
 ```
 
 ---
 
-## Project Structure
+## Backend Architecture
 
-A estrutura inicial do back-end seguirá a seguinte organização:
+O back-end será organizado utilizando o conceito de **Django Apps**, onde cada domínio da aplicação será responsável por concentrar suas próprias regras de negócio.
+
+Estrutura inicial prevista:
 
 ```text
-src
-└── main
-    ├── controller
-    ├── service
-    ├── repository
-    ├── entity
-    ├── dto
-    ├── config
-    ├── security
-    ├── exception
-    └── util
+backend/
+
+apps/
+├── users/
+├── selection/
+├── organizations/
+├── notifications/
+
+core/
+config/
 ```
 
-A estrutura poderá evoluir conforme novas funcionalidades forem adicionadas.
+Cada App poderá conter sua própria organização interna, incluindo:
+
+```text
+users/
+
+models.py
+views.py
+serializers.py
+services.py
+permissions.py
+urls.py
+tests.py
+```
+
+Essa abordagem favorece modularidade e facilita a evolução do sistema conforme novos módulos forem adicionados.
 
 ---
 
 ## Front-end Architecture
 
-O front-end será desenvolvido utilizando React e seguirá uma organização baseada em componentes reutilizáveis.
+O front-end será desenvolvido utilizando React e seguirá uma arquitetura baseada em componentes reutilizáveis.
 
 Estrutura inicial:
 
 ```text
-src
-├── components
-├── pages
-├── layouts
-├── hooks
-├── services
-├── contexts
-├── types
-├── utils
-└── assets
+src/
+
+api/
+components/
+hooks/
+layouts/
+pages/
+services/
+types/
+utils/
+assets/
 ```
+
+Responsabilidades principais:
+
+- **Pages:** composição das telas.
+- **Components:** componentes reutilizáveis.
+- **Hooks:** lógica de comunicação com a API utilizando React Query.
+- **API/Services:** centralização das chamadas HTTP.
+- **Types:** tipagens TypeScript compartilhadas.
 
 ---
 
 ## API Design
 
-A comunicação entre front-end e back-end será realizada por meio de uma API REST utilizando JSON.
+A comunicação entre front-end e back-end ocorrerá através de uma API REST utilizando JSON.
 
 Princípios adotados:
 
 - Endpoints RESTful
 - Versionamento da API (`/api/v1`)
+- Serialização utilizando Django REST Framework
 - Autenticação baseada em JWT
 - Respostas padronizadas
-- Códigos HTTP apropriados
+- Utilização adequada dos códigos HTTP
 
 ---
 
 ## Authentication
 
-O acesso será baseado em autenticação utilizando JWT (JSON Web Token).
+A autenticação será baseada em JWT (JSON Web Token), utilizando a biblioteca **Simple JWT**.
 
-Perfis previstos:
+Perfis inicialmente previstos:
 
 - Candidato
 - Organizador
 
-As permissões serão controladas pelo Spring Security.
+As permissões serão controladas através do sistema de autenticação e permissões do Django REST Framework.
 
 ---
 
 ## Database
 
-O sistema utilizará PostgreSQL como banco de dados relacional.
+O sistema utilizará PostgreSQL como banco de dados principal.
+
+O acesso aos dados será realizado através do Django ORM.
 
 A modelagem seguirá princípios de normalização e integridade referencial.
 
@@ -136,9 +167,11 @@ O modelo completo será documentado em **05-database.md**.
 
 Serviços externos previstos:
 
-- Resend (envio de e-mails)
-- Railway (deploy)
-- Vercel (frontend)
+- Resend (envio de e-mails em produção)
+- Railway (deploy do back-end e banco de dados)
+- Vercel (deploy do front-end)
+
+Durante o desenvolvimento, o envio de e-mails utilizará o Console Email Backend do Django.
 
 Novas integrações poderão ser adicionadas conforme a evolução do projeto.
 
@@ -149,8 +182,9 @@ Novas integrações poderão ser adicionadas conforme a evolução do projeto.
 Durante o desenvolvimento serão priorizados os seguintes princípios:
 
 - Separação de responsabilidades
+- Modularização por domínio (Django Apps)
 - Código limpo e legível
-- Componentização
+- Componentização da interface
 - Reutilização de código
 - Baixo acoplamento
 - Alta coesão

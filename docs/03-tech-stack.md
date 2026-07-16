@@ -2,102 +2,140 @@
 
 ## Overview
 
-A stack tecnológica foi escolhida considerando os objetivos do projeto, a aderência aos requisitos do MVP, a ampla adoção pelo mercado e as oportunidades de aprendizado em Engenharia de Software.
+A stack tecnológica foi definida considerando três fatores principais:
 
-Como este é um projeto de longo prazo, algumas tecnologias poderão ser alteradas conforme a evolução do produto e novas necessidades identificadas durante o desenvolvimento.
+- Compatibilidade com o ecossistema de projetos da Liga de TI;
+- Facilidade de manutenção e futura integração com outras plataformas da organização;
+- Oportunidade de aprendizado em desenvolvimento Full Stack e Engenharia de Software.
 
----
-
-## Front-end
-
-| Tecnologia | Finalidade |
-|------------|------------|
-| React | Construção da interface do usuário |
-| TypeScript | Tipagem estática e maior confiabilidade do código |
-| Vite | Ambiente de desenvolvimento e build |
-| Tailwind CSS | Estilização da aplicação |
-| React Router | Gerenciamento de rotas |
+O sistema será desenvolvido como uma aplicação web baseada em uma arquitetura cliente-servidor, utilizando uma API REST para comunicação entre o front-end e o back-end.
 
 ---
 
-## Back-end
+## Stack
 
-| Tecnologia | Finalidade |
-|------------|------------|
-| Java 21 | Linguagem principal |
-| Spring Boot | Desenvolvimento da API REST |
-| Spring Security | Autenticação e autorização |
-| Spring Data JPA | Persistência de dados |
-| Hibernate | ORM |
+### Backend
 
----
+- Python 3.12
+- Django 5
+- Django REST Framework
+- Simple JWT
+- PostgreSQL
 
-## Banco de Dados
+**Responsabilidades**
 
-| Tecnologia | Finalidade |
-|------------|------------|
-| PostgreSQL | Banco de dados relacional |
-
----
-
-## Autenticação
-
-- JWT (JSON Web Token)
-- Spring Security
+- API REST
+- Regras de negócio
+- Autenticação e autorização
+- Persistência de dados
+- Envio de e-mails
+- Administração do sistema
 
 ---
 
-## Comunicação
+### Frontend
 
-| Tecnologia | Finalidade |
-|------------|------------|
-| Resend | Envio de e-mails transacionais (confirmações, aprovações, comunicados, etc.) |
+- React 18
+- TypeScript
+- Vite
+- Tailwind CSS
+- React Query
+- React Router
 
----
+**Responsabilidades**
 
-## Documentação
-
-- OpenAPI / Swagger
-
----
-
-## Testes
-
-- JUnit
-- Mockito
+- Interface do usuário
+- Consumo da API
+- Gerenciamento de estado do servidor
+- Navegação entre páginas
+- Componentização da interface
 
 ---
 
-## DevOps
+### Infraestrutura
 
-- Docker
+#### Desenvolvimento
+
+- Docker Desktop
 - Docker Compose
-- GitHub Actions (CI/CD)
+
+#### Produção
+
+- Railway
 
 ---
 
-## Deploy
+### Banco de Dados
 
-| Camada | Tecnologia |
-|--------|------------|
-| Front-end | Vercel |
-| Back-end | Railway |
-| Banco de Dados | Railway PostgreSQL |
+- PostgreSQL 16+
 
 ---
 
-## Estrutura da Aplicação
+### Autenticação
 
-O back-end seguirá uma arquitetura em camadas, separando responsabilidades entre apresentação, regras de negócio e acesso aos dados.
+- JWT (Simple JWT)
+
+---
+
+### Comunicação
+
+#### Desenvolvimento
+
+- Console Email Backend (Django)
+
+#### Produção
+
+- Resend
+
+---
+
+## Requisitos
+
+### Utilizando Docker
+
+- Docker Desktop
+- Docker Compose
+
+### Sem Docker
+
+- Python 3.12
+- Node.js 20+
+- PostgreSQL 16+
+
+---
+
+## Estrutura Geral
 
 ```text
-Controller
-    ↓
-Service
-    ↓
-Repository
-    ↓
-Database
+Frontend (React)
+        │
+        │ HTTP / REST
+        ▼
+Backend (Django REST Framework)
+        │
+        ▼
+PostgreSQL
 ```
 
-Essa organização tem como objetivo facilitar a manutenção, os testes e a evolução do sistema.
+---
+
+## Motivação das Escolhas
+
+| Tecnologia | Motivo |
+|------------|--------|
+| React | Interface moderna baseada em componentes reutilizáveis. |
+| TypeScript | Maior segurança, tipagem estática e facilidade de manutenção. |
+| Django | Framework com excelente produtividade e organização do projeto. |
+| Django REST Framework | Construção de APIs REST seguindo boas práticas. |
+| PostgreSQL | Banco relacional robusto, ideal para o domínio do projeto. |
+| Docker | Padroniza o ambiente de desenvolvimento e simplifica o deploy. |
+| Railway | Plataforma simples para publicação da aplicação. |
+| Resend | Serviço para envio de e-mails transacionais durante o processo seletivo. |
+
+---
+
+## Observações
+
+Esta stack foi escolhida para manter compatibilidade com outros sistemas desenvolvidos pela Liga de TI, permitindo o compartilhamento de conhecimento, infraestrutura e futuras integrações entre projetos.
+
+Algumas tecnologias poderão ser revisadas conforme a evolução do produto e novos requisitos forem identificados.
