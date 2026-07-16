@@ -1,40 +1,118 @@
-# Career Management Platform
+# Visão do Produto
 
 ## Overview
 
-The career management platform is a self develop system designed to centralize and organize the process of searching for professional opportunities, tracking applications and managing career growth.
+O projeto consiste em uma plataforma web para gerenciar processos seletivos de organizações estudantis, como Ligas Acadêmicas, Empresas Juniores, Centros Acadêmicos e outras entidades.
+
+A plataforma busca centralizar todo o processo seletivo em um único ambiente, permitindo que candidatos acompanhem sua evolução e que organizadores gerenciem inscrições, avaliações, entrevistas e resultados de forma estruturada.
+
+O objetivo inicial (MVP) será atender às necessidades da Liga de TI da PUC-Campinas, substituindo o processo atual baseado em Google Forms, Notion e controles manuais.
+
+---
 
 ## Problem
 
-The process of searching for internships and jobs involves managing multiple opportunities across different platforms, tools, emails and personal notes. This make it difficult to keep track of applications, interview stages, deadlines and historical data over time.
+Grande parte das organizações estudantis realiza seus processos seletivos utilizando diversas ferramentas desconectadas, como Google Forms, planilhas, Notion, WhatsApp e e-mails.
 
-## Vision (why?)
+Essa abordagem gera problemas como:
 
-Create a centralized experience that helps students and professional manage their career journeys in an easy and intuitive way, with the same organization and visibility used in a professional project management.
+- informações espalhadas em diferentes plataformas;
+- trabalho manual para organizar candidatos;
+- dificuldade em acompanhar cada etapa do processo;
+- avaliações pouco padronizadas;
+- comunicação descentralizada;
+- pouca rastreabilidade do histórico dos candidatos;
+- dificuldade na transição entre gestões.
+
+Além disso, cada novo processo seletivo exige praticamente reconstruir toda a organização novamente.
+
+---
+
+## Vision (Why?)
+
+Criar uma plataforma simples, organizada e escalável que permita às organizações estudantis conduzirem processos seletivos de maneira profissional.
+
+Mais do que digitalizar formulários, a proposta é oferecer uma experiência completa para candidatos e avaliadores, reduzindo trabalho operacional e aumentando a qualidade das decisões durante o processo seletivo.
+
+A longo prazo, o projeto pode evoluir para uma plataforma de gestão completa para organizações estudantis.
+
+---
 
 ## Target Users
 
-Software engineering/IT students and early-career developers looking for internships or their first professional opportunities.
+### Candidatos
+
+Pessoas interessadas em participar da organização.
+
+Necessidades:
+
+- realizar inscrição;
+- acompanhar andamento do processo;
+- visualizar próximas etapas;
+- receber comunicações;
+- acessar feedbacks (quando disponibilizados).
+
+---
+
+### Organizadores
+
+Diretores, coordenadores e membros responsáveis pelo processo seletivo.
+
+Necessidades:
+
+- criar processos seletivos;
+- configurar etapas;
+- visualizar candidatos;
+- avaliar participantes;
+- registrar observações;
+- acompanhar indicadores;
+- comunicar resultados.
+
+---
 
 ## Goals
 
-- Centralize job applications and interview information.
-- Provide visibility over the career search process.
-- Help users analyze their progress over time.
-- Encourage a more structured approach to career development.
+- Centralizar todas as informações do processo seletivo.
+- Facilitar o acompanhamento dos candidatos.
+- Padronizar avaliações.
+- Reduzir tarefas manuais.
+- Melhorar a experiência dos candidatos.
+- Organizar o histórico dos processos seletivos.
+- Facilitar futuras gestões da organização.
+- Servir como um projeto de estudo em Engenharia de Software, arquitetura e desenvolvimento Full Stack.
+
+---
 
 ## Non-Goals
 
-- This platform is not intended to replace job marketplaces such as LinkedIn.
-- It does not provide or guarantee job opportunities automatically.
-- It is not designed as a recruitment platform for companies.
-- Its purpose is to help individuals organize, track and improve their career management process.
+Neste primeiro momento, o projeto não pretende:
 
-## Future  Possibilities
+- substituir plataformas de recrutamento profissionais;
+- realizar entrevistas por vídeo;
+- utilizar inteligência artificial para decidir aprovações;
+- integrar com plataformas externas;
+- atender empresas.
 
-- Integration with job search platforms.
-- Resume analysis.
-- Profile-based recommendations.
-- Interview preparation support.
-- Professional goal tracking.
-- Career analytics.
+O foco será exclusivamente em organizações estudantis.
+
+---
+
+## Future Possibilities
+
+Possíveis evoluções futuras:
+
+- Dashboard com métricas do processo seletivo;
+- Sistema de entrevistas;
+- Agenda integrada;
+- Envio automático de e-mails;
+- Área de feedback aos candidatos;
+- Banco de talentos;
+- Gestão completa de membros;
+- Gestão de diretorias;
+- Gestão de eventos;
+- Gestão de projetos internos;
+- Onboarding de novos membros;
+- Sistema de documentação da organização;
+- Controle de patrimônio;
+- Integração com Discord;
+- Aplicativo mobile.
