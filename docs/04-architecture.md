@@ -68,6 +68,7 @@ backend/
 apps/
 ├── users/
 ├── selection/
+├── evaluation
 ├── organizations/
 ├── notifications/
 

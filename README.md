@@ -1,3 +1,10 @@
-# Liga-Processo_Seletivo
+# Liga-Processo-Seletivo
 
-Sistema oficial do processo seletivo da Liga de TI Puc-Campinas.
+Sistema para gerenciamento do Processo Seletivo da Liga de TI da PUC-Campinas.
+
+## Stack
+
+- Backend: Django + Django REST Framework
+- Frontend: React + TypeScript + Vite
+- Banco de Dados: PostgreSQL
+- Infraestrutura: Docker Compose
