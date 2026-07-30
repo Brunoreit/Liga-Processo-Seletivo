@@ -4,14 +4,13 @@ services:
     image: postgres:16-alpine
     container_name: liga_postgres
     
-    ports:
-      - "5432:5432"
-
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -32,25 +31,24 @@ services:
       - .env
 
     depends_on:
-      -postgres
+      - postgres
 
-    
-  frontend:
-  build: ./frontend
-  container_name: liga_frontend
-
-  volumes:
-    - ./frontend:/app
-    - /app/node_modules
-
-  ports:
-    - "5173:5173"
-
-  env_file:
-    - .env
-
-  depends_on:
-    - backend
+#  frontend:
+#    build: ./frontend
+#    container_name: liga_frontend
+  
+#    volumes:
+#      - ./frontend:/app
+#      - /app/node_modules
+  
+#    ports:
+#      - "5173:5173"
+  
+#    env_file:
+#      - .env
+  
+#    depends_on:
+#      - backend
 
 volumes:
   postgres_data:
