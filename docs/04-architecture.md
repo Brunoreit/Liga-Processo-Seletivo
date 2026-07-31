@@ -67,9 +67,8 @@ backend/
 
 apps/
 ├── users/
-├── selection/
-├── evaluation
-├── organizations/
+├── recruitment/
+├── evaluation/
 ├── notifications/
 
 core/
