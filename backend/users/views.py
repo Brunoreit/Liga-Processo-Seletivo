@@ -1,9 +1,9 @@
 from django.shortcuts import render
 from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from .models import User
-from .serializers import UserSerializer
+from .serializers import UserSerializer, RegisterUserSerializer
 
 
 class CurrentUserView(generics.RetrieveAPIView):
@@ -12,3 +12,7 @@ class CurrentUserView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+class RegisterUserView(generics.CreateAPIView):
+    serializer_class = RegisterUserSerializer
+    permission_classes = [AllowAny]
