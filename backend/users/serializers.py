@@ -17,6 +17,10 @@ class UserSerializer(serializers.ModelSerializer):
             "github",
             "profile_picture",
         )
+        read_only_fields = (
+            "id",
+            "email",
+        )
 
 class RegisterUserSerializer(serializers.ModelSerializer):
     class Meta:
