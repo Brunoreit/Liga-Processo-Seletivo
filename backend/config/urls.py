@@ -37,6 +37,6 @@ urlpatterns = [
 
     path(
         "api/v1/users/",
-        include("users.urls"),
+        include("apps.users.urls"),
     )
 ]
