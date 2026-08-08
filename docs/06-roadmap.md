@@ -2,188 +2,274 @@
 
 ## Overview
 
-O desenvolvimento será realizado de forma incremental, priorizando entregas pequenas e funcionais.
+O desenvolvimento será realizado de forma incremental, priorizando entregas pequenas, funcionais e testáveis.
 
-Cada etapa representa um marco importante na evolução do produto, permitindo validar ideias, coletar feedback e incorporar melhorias ao longo do desenvolvimento.
+O projeto seguirá uma abordagem de fluxo vertical: cada domínio será desenvolvido até possuir uma funcionalidade utilizável antes de avançar para novas partes do sistema.
 
-As fases descritas abaixo representam uma visão inicial do projeto e poderão ser ajustadas conforme novas necessidades forem identificadas.
+Este roadmap representa a direção geral do projeto e poderá ser ajustado conforme novas regras de negócio e necessidades forem descobertas durante o desenvolvimento.
 
 ---
 
 # Fase 0 — Descoberta e Planejamento
 
-**Objetivo**
+## Objetivo
 
-Compreender o problema e definir os requisitos do sistema.
+Compreender o problema e definir a base inicial do sistema.
 
-**Principais atividades**
+## Principais atividades
 
 - Levantamento de requisitos
-- Conversas com outras organizações estudantis
+- Conversas com organizações estudantis
 - Definição do MVP
 - Escolha da stack
-- Definição da arquitetura
+- Definição da arquitetura inicial
 - Modelagem inicial do banco
-- Wireframes das telas
+- Wireframes das principais telas
 - Organização do repositório
 
-**Resultado esperado**
+## Resultado
 
-Toda a documentação do projeto concluída.
+Base conceitual e técnica necessária para iniciar o desenvolvimento.
 
 ---
 
 # Fase 1 — Estrutura Inicial
 
-**Objetivo**
+## Objetivo
 
-Criar a base técnica do projeto.
+Criar a infraestrutura base da aplicação.
 
-**Principais atividades**
+## Principais atividades
 
-- Configuração do ambiente
-- Docker
-- Backend Django
+- Backend Django + Django REST Framework
 - Frontend React
 - PostgreSQL
-- Integração inicial entre front e back
-- Deploy inicial
+- Docker
+- Estruturação dos apps do backend
+- Integração inicial entre os serviços
+- Configuração inicial do projeto
 
-**Resultado esperado**
+## Resultado
 
-Projeto funcionando de ponta a ponta.
+Aplicação executando com frontend, backend e banco de dados.
 
 ---
 
-# Fase 2 — Autenticação
+# Fase 2 — Usuários e Autenticação
 
-**Objetivo**
+## Objetivo
 
-Implementar o sistema de usuários.
+Criar o fluxo principal de usuários da plataforma.
 
-**Principais atividades**
+## Principais atividades
 
+- Model de usuário
 - Cadastro
-- Login
-- JWT
-- Controle de permissões
-- Perfil do usuário
+- Login com JWT
+- Refresh token
+- Consulta do usuário autenticado
+- Atualização de perfil
+- Controle inicial de permissões
 
-**Resultado esperado**
+## Pendente / evolução futura
 
-Usuários autenticados utilizando a plataforma.
+- Recuperação de senha
+- Refinamentos de perfil
 
----
+## Resultado
 
-# Fase 3 — Processo Seletivo
-
-**Objetivo**
-
-Implementar o núcleo do sistema.
-
-**Principais atividades**
-
-- Criar processo seletivo
-- Configurar etapas
-- Inscrição de candidatos
-- Fluxo entre etapas
-- Visualização do status
-
-**Resultado esperado**
-
-Primeiro fluxo completo do processo seletivo.
+Usuário consegue criar conta, autenticar-se e gerenciar seus dados básicos.
 
 ---
 
-# Fase 4 — Avaliações
+# Fase 3 — Núcleo do Processo Seletivo
 
-**Objetivo**
+## Objetivo
 
-Permitir que organizadores realizem avaliações.
+Construir o primeiro fluxo completo de um processo seletivo.
 
-**Principais atividades**
+### 3.1 — Processo Seletivo
 
-- Registrar notas
-- Registrar observações
-- Consultar histórico
-- Alterar status dos candidatos
+- Model e migration
+- Administração pelo Django Admin
+- Criação
+- Listagem
+- Consulta individual
+- Atualização
+- Exclusão somente em rascunho
+- Permissões administrativas
+- Visibilidade de processos publicados
+- Ciclo de vida:
+  - Draft
+  - Published
+  - Closed
+- Registro automático de publicação
 
-**Resultado esperado**
+### 3.2 — Etapas
 
-Processo seletivo totalmente operacional.
+- Modelar etapas
+- Relacionar etapas ao processo seletivo
+- Definir ordem das etapas
+- Criar/listar etapas
+- Editar etapas
+- Excluir etapas
+- Impedir alterações estruturais quando necessário
+- Integrar etapas ao detalhe do processo seletivo
+
+### 3.3 — Inscrições
+
+- Modelar inscrição
+- Relacionar candidato e processo seletivo
+- Criar inscrição
+- Impedir inscrição duplicada
+- Respeitar período de inscrições
+- Consultar inscrições do candidato
+- Consultar candidatos inscritos pelo organizador
+
+### 3.4 — Fluxo do Processo
+
+- Associar candidato às etapas
+- Controlar avanço entre etapas
+- Status da inscrição
+- Histórico do candidato no processo
+
+## Resultado esperado
+
+Fluxo:
+
+Processo Seletivo
+→ Etapas
+→ Inscrição
+→ Acompanhamento do candidato
+
+funcionando de ponta a ponta.
 
 ---
 
-# Fase 5 — Comunicação
+# Fase 4 — Primeiro Frontend Funcional
 
-**Objetivo**
+## Objetivo
+
+Transformar o fluxo já existente no backend em uma experiência utilizável.
+
+## Principais atividades
+
+- Login e cadastro
+- Perfil do candidato
+- Listagem de processos seletivos
+- Detalhe de processo
+- Inscrição
+- Área "Minhas inscrições"
+- Interface administrativa inicial
+- Criação e edição de processos
+- Configuração de etapas
+
+## Resultado esperado
+
+Primeiro fluxo vertical completo utilizável através da interface.
+
+---
+
+# Fase 5 — Avaliações
+
+## Objetivo
+
+Permitir avaliação dos candidatos durante as etapas.
+
+## Principais atividades
+
+- Registrar avaliações
+- Notas
+- Observações
+- Avaliadores
+- Histórico de avaliações
+- Aprovação/reprovação
+- Movimentação entre etapas
+
+## Resultado esperado
+
+Organizadores conseguem conduzir o processo seletivo dentro da plataforma.
+
+---
+
+# Fase 6 — Comunicação
+
+## Objetivo
 
 Automatizar a comunicação com candidatos.
 
-**Principais atividades**
+## Principais atividades
 
 - Confirmação de inscrição
-- Convocação
+- Convocação para etapas
+- Aprovação/reprovação
 - Resultado final
 - Comunicados gerais
+- Templates de e-mail
 
-**Resultado esperado**
+## Resultado esperado
 
-Redução significativa do trabalho manual da organização.
+Redução do trabalho manual de comunicação da organização.
 
 ---
 
-# Fase 6 — MVP
+# Fase 7 — Qualidade e Produção
 
-**Objetivo**
+## Objetivo
 
-Disponibilizar a primeira versão utilizável.
+Preparar o sistema para utilização real.
 
-**Critérios**
+## Principais atividades
 
-- Processo seletivo completo
+- Testes automatizados
+- Tratamento de erros
+- Validações adicionais
+- Segurança
+- CI/CD
+- Deploy
+- Monitoramento básico
+- Revisão de UX
+- Testes do fluxo completo
+
+## Resultado esperado
+
+MVP estável e disponível em produção.
+
+---
+
+# Fase 8 — MVP
+
+## Critérios
+
+- Cadastro e autenticação
+- Perfil do candidato
+- Processo seletivo
+- Etapas
+- Inscrições
+- Fluxo dos candidatos
 - Dashboard do candidato
 - Dashboard do organizador
 - Avaliações
 - Comunicação por e-mail
 - Deploy em produção
 
-**Resultado esperado**
+## Resultado esperado
 
-Primeira utilização da plataforma pela Liga de TI.
-
----
-
-# Fase 7 — Evolução do Produto
-
-Após a validação do MVP, novas funcionalidades poderão ser avaliadas.
-
-Possibilidades futuras:
-
-- Dashboard analítico
-- Banco de talentos
-- Integração com Discord
-- Integração com Google Calendar
-- Exportação de relatórios
-- Gestão de membros
-- Gestão de eventos
-- Múltiplas organizações
-- Inteligência Artificial para apoio às avaliações
+Primeira utilização real da plataforma pela Liga de TI.
 
 ---
 
-## Aprendizados Esperados
-
-Além da entrega do produto, este projeto busca consolidar conhecimentos em:
+# Aprendizados Esperados
 
 - Desenvolvimento Full Stack
 - APIs REST
-- Django
+- Django e Django REST Framework
 - React
 - PostgreSQL
 - Docker
 - Git e GitHub
 - Arquitetura de Software
+- Modelagem de domínio
 - Testes
 - CI/CD
 - Deploy
