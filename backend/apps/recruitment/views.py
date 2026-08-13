@@ -20,11 +20,19 @@ class RecruitmentProcessQueryMixin:
 class StageMixin:
     def get_queryset(self):
         process_id = self.kwargs["process_id"]
+        user = self.request.user
 
-        return Stage.objects.filter(
-            recruitment_process_id = process_id
+        queryset = Stage.objects.filter(
+            recruitment_process_id=process_id
         )
 
+        if user.is_authenticated and user.is_staff:
+            return queryset
+
+        return queryset.exclude(
+            recruitment_process__status=
+            RecruitmentProcess.Status.DRAFT
+        )
 
 
 class RecruitmentProcessListCreateView(RecruitmentProcessQueryMixin, generics.ListCreateAPIView):
