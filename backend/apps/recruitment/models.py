@@ -30,3 +30,38 @@ class RecruitmentProcess(models.Model):
 
     def __str__(self):
         return self.title
+
+class Stage(models.Model):
+    recruitment_process = models.ForeignKey(
+        RecruitmentProcess,
+        on_delete=models.CASCADE,
+        related_name="stages",
+    )
+
+    title = models.CharField(max_length=150)
+    description = models.TextField()
+    order = models.PositiveIntegerField()
+
+    starts_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    ends_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+
+        ordering = ["order"]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recruitment_process", "order"],
+                name="unique_stage_order_per_recruitment_process"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.order} - {self.title}"
