@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import RecruitmentProcess, Stage
+from .models import RecruitmentProcess, Stage, Application
 from django.utils import timezone
 
 class RecruitmentProcessSerializer(serializers.ModelSerializer):
@@ -268,4 +268,58 @@ class StageSerializer(serializers.ModelSerializer):
         if self.instance is not None:
             return self.instance.recruitment_process
 
+        return self.context.get("recruitment_process")
+
+
+class ApplicationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Application
+
+        fields = (
+            "id",
+            "candidate",
+            "recruitment_process",
+            "status",
+            "applied_at",
+            "canceled_at",
+        )
+
+        read_only_fields = (
+            "id",
+            "candidate",
+            "recruitment_process",
+            "status",
+            "applied_at",
+            "canceled_at",
+        )
+
+    def validate(self, attrs):
+        process = self._get_recruitment_process()
+        now = timezone.now()
+
+        if process.status != RecruitmentProcess.Status.PUBLISHED:
+            raise serializers.ValidationError(
+                {
+                    "detail": ("Não é possível se inscrever nesse processo.")
+                }
+            )
+
+        if now < process.registration_start:
+            raise serializers.ValidationError(
+                {
+                    "detail":("As inscrições para esse processo ainda não começaram.")
+                }
+            )
+        if now > process.registration_end:
+            raise serializers.ValidationError(
+                {
+                    "detail": ("As inscrições para esse processo já foram encerradas.")
+                }
+            )
+        return attrs
+
+    def _get_recruitment_process(self):
+        if self.instance is not None:
+            return self.instance.recruitment_process
+    
         return self.context.get("recruitment_process")
