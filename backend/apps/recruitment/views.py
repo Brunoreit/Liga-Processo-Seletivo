@@ -5,7 +5,7 @@ from .permissions import IsStaffOrReadOnly
 from .serializers import RecruitmentProcessSerializer, StageSerializer, ApplicationSerializer
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework import status
@@ -122,6 +122,8 @@ class StageDetailView(StageMixin, generics.RetrieveUpdateDestroyAPIView):
         
         instance.delete()
 
+
+
 class ApplicationCreateView(generics.CreateAPIView):
     serializer_class = ApplicationSerializer
     permission_classes = [IsAuthenticated]
@@ -216,4 +218,25 @@ class ApplicationCancelView(APIView):
             serializer.data,
             status=status.HTTP_200_OK,
         )
-        
+
+
+class MyApplicationsView(generics.ListAPIView):
+    serializer_class = ApplicationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Application.objects.filter(
+            candidate=self.request.user
+        )
+
+
+class ProcessApplicationsView(generics.ListAPIView):
+    serializer_class = ApplicationSerializer
+    permission_classes = [IsAdminUser]  # ou sua permissão customizada
+
+    def get_queryset(self):
+        process_id = self.kwargs["process_id"]
+
+        return Application.objects.filter(
+            recruitment_process_id=process_id
+        )
