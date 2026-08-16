@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import RecruitmentProcess, Stage
+from .models import RecruitmentProcess, Stage, Application
 
 class StageInLine(admin.TabularInline):
     model = Stage
@@ -28,3 +28,30 @@ class RecruitmentProcessAdmin(admin.ModelAdmin):
 
     inlines = [StageInLine]
 
+@admin.register(Application)
+class ApplicationAdmin(admin.ModelAdmin):
+
+    list_display = (
+        "id",
+        "candidate",
+        "recruitment_process",
+        "status",
+        "applied_at",
+        "canceled_at",
+    )
+
+
+    list_display_links = (
+        "id",
+        "candidate",
+    ) 
+
+    list_filter = (
+        "status",
+        "recruitment_process",
+    )
+
+    search_fields = (
+        "candidate__email",
+        "recruitment_process__title",
+    )

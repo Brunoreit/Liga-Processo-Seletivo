@@ -1,9 +1,14 @@
 from rest_framework import generics
-from .models import RecruitmentProcess, Stage
+from rest_framework.views import APIView
+from .models import RecruitmentProcess, Stage, Application
 from .permissions import IsStaffOrReadOnly
-from .serializers import RecruitmentProcessSerializer, StageSerializer
+from .serializers import RecruitmentProcessSerializer, StageSerializer, ApplicationSerializer
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from django.utils import timezone
+from rest_framework.response import Response
+from rest_framework import status
 
 class RecruitmentProcessQueryMixin:
     #sobrescrevendo método
@@ -116,3 +121,122 @@ class StageDetailView(StageMixin, generics.RetrieveUpdateDestroyAPIView):
             )
         
         instance.delete()
+
+
+
+class ApplicationCreateView(generics.CreateAPIView):
+    serializer_class = ApplicationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        
+        process_id = self.kwargs["process_id"]
+
+        process = get_object_or_404(
+            RecruitmentProcess,
+            pk=process_id,
+        )
+
+        candidate = self.request.user
+
+        queryset = Application.objects.filter(
+            recruitment_process_id= process_id,
+            candidate=candidate,
+        )
+
+        application = queryset.first()
+
+        if application is None:
+            serializer.save(candidate=candidate, recruitment_process=process)
+
+        else:
+            if application.status == Application.Status.ACTIVE:
+                raise ValidationError(
+                    {
+                        "detail": ("Você já está inscrito nesse processo")
+                    }
+                )
+            
+            else:
+                application.status = Application.Status.ACTIVE
+                application.canceled_at = None
+                application.save()
+
+                serializer.instance = application
+
+
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+
+        process_id = self.kwargs["process_id"]
+
+        process = get_object_or_404(
+            RecruitmentProcess,
+            pk=process_id,
+        )
+        context["recruitment_process"] = process
+        return context
+        
+
+class ApplicationCancelView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, process_id):
+        candidate = request.user
+
+        application = Application.objects.filter(
+            recruitment_process_id=process_id,
+            candidate=candidate,
+        ).first()
+
+        if application is None:
+            raise ValidationError(
+                {
+                    "detail": (
+                        "Você não pode cancelar uma inscrição em um processo no qual não está inscrito."
+                    )
+                }
+            )
+
+        if application.status == Application.Status.CANCELED:
+            raise ValidationError(
+                {
+                    "detail": (
+                        "Sua inscrição nesse processo já está cancelada."
+                    )
+                }
+            )
+
+        application.status = Application.Status.CANCELED
+        application.canceled_at = timezone.now()
+        application.save()
+
+        serializer = ApplicationSerializer(application)
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK,
+        )
+
+
+class MyApplicationsView(generics.ListAPIView):
+    serializer_class = ApplicationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Application.objects.filter(
+            candidate=self.request.user
+        )
+
+
+class ProcessApplicationsView(generics.ListAPIView):
+    serializer_class = ApplicationSerializer
+    permission_classes = [IsAdminUser]  # ou sua permissão customizada
+
+    def get_queryset(self):
+        process_id = self.kwargs["process_id"]
+
+        return Application.objects.filter(
+            recruitment_process_id=process_id
+        )

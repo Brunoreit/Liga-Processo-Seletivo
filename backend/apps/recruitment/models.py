@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models
 
 
+
 class RecruitmentProcess(models.Model):
     class Status(models.TextChoices):
         DRAFT = "draft", "Rascunho"
@@ -30,6 +31,8 @@ class RecruitmentProcess(models.Model):
 
     def __str__(self):
         return self.title
+
+
 
 class Stage(models.Model):
     recruitment_process = models.ForeignKey(
@@ -65,3 +68,41 @@ class Stage(models.Model):
 
     def __str__(self):
         return f"{self.order} - {self.title}"
+
+
+class Application(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Ativo"
+        CANCELED = "canceled", "Cancelado"
+
+    candidate = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete= models.PROTECT,
+        related_name="applications",
+    )
+
+    recruitment_process = models.ForeignKey(
+        RecruitmentProcess,
+        on_delete= models.CASCADE,
+        related_name="applications",
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+    )
+
+    applied_at = models.DateTimeField(auto_now_add=True)
+    canceled_at = models.DateTimeField(null=True, blank=True,)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["candidate", "recruitment_process"],
+                name="unique_active_application_per_candidate_process",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.candidate} - {self.recruitment_process}"
