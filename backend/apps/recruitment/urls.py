@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RecruitmentProcessListCreateView, RecruitmentProcessDetailView, StageListCreateView, StageDetailView, ApplicationView
+from .views import RecruitmentProcessListCreateView, RecruitmentProcessDetailView, StageListCreateView, StageDetailView, ApplicationCreateView, ApplicationCancelView
 
 urlpatterns = [
     path(
@@ -28,7 +28,13 @@ urlpatterns = [
 
     path(
         "processes/<int:process_id>/applications/",
-        ApplicationView.as_view(),
+        ApplicationCreateView.as_view(),
         name="application-create"
+    ),
+
+    path(
+        "processes/<int:process_id>/applications/cancel/",
+        ApplicationCancelView.as_view(),
+        name="application-cancel",
     )
 ]

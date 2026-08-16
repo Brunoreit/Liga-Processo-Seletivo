@@ -1,10 +1,14 @@
 from rest_framework import generics
+from rest_framework.views import APIView
 from .models import RecruitmentProcess, Stage, Application
 from .permissions import IsStaffOrReadOnly
 from .serializers import RecruitmentProcessSerializer, StageSerializer, ApplicationSerializer
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
+from rest_framework.response import Response
+from rest_framework import status
 
 class RecruitmentProcessQueryMixin:
     #sobrescrevendo método
@@ -118,7 +122,7 @@ class StageDetailView(StageMixin, generics.RetrieveUpdateDestroyAPIView):
         
         instance.delete()
 
-class ApplicationView(generics.CreateAPIView):
+class ApplicationCreateView(generics.CreateAPIView):
     serializer_class = ApplicationSerializer
     permission_classes = [IsAuthenticated]
 
@@ -164,7 +168,7 @@ class ApplicationView(generics.CreateAPIView):
         context = super().get_serializer_context()
 
         process_id = self.kwargs["process_id"]
-        
+
         process = get_object_or_404(
             RecruitmentProcess,
             pk=process_id,
@@ -173,4 +177,43 @@ class ApplicationView(generics.CreateAPIView):
         return context
         
 
+class ApplicationCancelView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def post(self, request, process_id):
+        candidate = request.user
+
+        application = Application.objects.filter(
+            recruitment_process_id=process_id,
+            candidate=candidate,
+        ).first()
+
+        if application is None:
+            raise ValidationError(
+                {
+                    "detail": (
+                        "Você não pode cancelar uma inscrição em um processo no qual não está inscrito."
+                    )
+                }
+            )
+
+        if application.status == Application.Status.CANCELED:
+            raise ValidationError(
+                {
+                    "detail": (
+                        "Sua inscrição nesse processo já está cancelada."
+                    )
+                }
+            )
+
+        application.status = Application.Status.CANCELED
+        application.canceled_at = timezone.now()
+        application.save()
+
+        serializer = ApplicationSerializer(application)
+
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK,
+        )
+        
