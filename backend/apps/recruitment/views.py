@@ -150,20 +150,28 @@ class ApplicationCreateView(generics.CreateAPIView):
         if application is None:
             serializer.save(candidate=candidate, recruitment_process=process)
 
-        else:
-            if application.status == Application.Status.ACTIVE:
-                raise ValidationError(
-                    {
-                        "detail": ("Você já está inscrito nesse processo")
-                    }
-                )
-            
-            else:
-                application.status = Application.Status.ACTIVE
-                application.canceled_at = None
-                application.save()
+        elif application.status == Application.Status.ACTIVE:
+            raise ValidationError(
+                {
+                    "detail": ("Você já está inscrito nesse processo")
+                }
+            )
 
-                serializer.instance = application
+        elif application.status == Application.Status.CANCELED:
+            application.status = Application.Status.ACTIVE
+            application.canceled_at = None
+            application.save(update_fields=["status", "canceled_at"])
+
+            serializer.instance = application
+
+        else:
+            raise ValidationError(
+                {
+                    "detail": (
+                        "Apenas inscrições canceladas podem ser reativadas."
+                    )
+                }
+            )
 
 
 
@@ -200,18 +208,18 @@ class ApplicationCancelView(APIView):
                 }
             )
 
-        if application.status == Application.Status.CANCELED:
+        if application.status != Application.Status.ACTIVE:
             raise ValidationError(
                 {
                     "detail": (
-                        "Sua inscrição nesse processo já está cancelada."
+                        "Apenas inscrições ativas podem ser canceladas."
                     )
                 }
             )
 
         application.status = Application.Status.CANCELED
         application.canceled_at = timezone.now()
-        application.save()
+        application.save(update_fields=["status", "canceled_at"])
 
         serializer = ApplicationSerializer(application)
 

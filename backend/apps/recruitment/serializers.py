@@ -26,8 +26,14 @@ class RecruitmentProcessSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
-        registration_start = attrs.get("registration_start")
-        registration_end = attrs.get("registration_end")
+        registration_start = attrs.get(
+            "registration_start",
+            self.instance.registration_start if self.instance else None,
+        )
+        registration_end = attrs.get(
+            "registration_end",
+            self.instance.registration_end if self.instance else None,
+        )
 
         if(
             registration_start is not None
@@ -38,6 +44,19 @@ class RecruitmentProcessSerializer(serializers.ModelSerializer):
                 {
                 "registration_end": (
                     "O fim das inscrições deve ser posterior ao início"
+                    )
+                }
+            )
+
+        if (
+            self.instance is None
+            and attrs.get("status", RecruitmentProcess.Status.DRAFT)
+            != RecruitmentProcess.Status.DRAFT
+        ):
+            raise serializers.ValidationError(
+                {
+                    "status": (
+                        "O processo seletivo deve ser criado como rascunho."
                     )
                 }
             )
