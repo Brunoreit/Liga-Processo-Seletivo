@@ -1,6 +1,6 @@
 from rest_framework import generics
 from rest_framework.views import APIView
-from .models import RecruitmentProcess, Stage, Application
+from .models import RecruitmentProcess, Stage, Application, StageProgress
 from .permissions import IsStaffOrReadOnly
 from .serializers import RecruitmentProcessSerializer, StageSerializer, ApplicationSerializer
 from rest_framework.exceptions import ValidationError
@@ -9,6 +9,7 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework import status
+from django.db import transaction
 
 class RecruitmentProcessQueryMixin:
     #sobrescrevendo método
@@ -232,11 +233,91 @@ class MyApplicationsView(generics.ListAPIView):
 
 class ProcessApplicationsView(generics.ListAPIView):
     serializer_class = ApplicationSerializer
-    permission_classes = [IsAdminUser]  # ou sua permissão customizada
+    permission_classes = [IsAdminUser]
 
     def get_queryset(self):
         process_id = self.kwargs["process_id"]
 
         return Application.objects.filter(
             recruitment_process_id=process_id
+        )
+
+
+
+class RecruitmentProcessStartView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, process_id):
+        process = get_object_or_404(
+            RecruitmentProcess,
+            pk=process_id,
+        )
+
+        now = timezone.now()
+
+        if process.status != RecruitmentProcess.Status.PUBLISHED:
+            raise ValidationError(
+                {
+                    "detail": (
+                        "O processo seletivo precisa estar publicado para ser iniciado."
+                    )
+                }
+            )
+
+        if now <= process.registration_end:
+            raise ValidationError(
+                {
+                    "detail": (
+                        "O processo seletivo só pode ser iniciado após o encerramento das inscrições."
+                    )
+                }
+            )
+
+        if process.started_at is not None:
+            raise ValidationError(
+                {
+                    "detail": (
+                        "Este processo seletivo já foi iniciado."
+                    )
+                }
+            )
+
+        first_stage = process.stages.order_by("order").first()
+
+        if first_stage is None:
+            raise ValidationError(
+                {
+                    "detail": (
+                        "O processo seletivo não possui etapas configuradas."
+                    )
+                }
+            )
+
+        applications = Application.objects.filter(
+            recruitment_process=process,
+            status=Application.Status.ACTIVE,
+        )
+
+        with transaction.atomic():
+            progresses = [
+                StageProgress(
+                    application=application,
+                    stage=first_stage,
+                )
+                for application in applications
+            ]
+
+            StageProgress.objects.bulk_create(progresses)
+
+            process.started_at = now
+            process.save(
+                update_fields=["started_at"])
+
+        return Response(
+            {
+                "detail": "Processo seletivo iniciado com sucesso.",
+                "candidates_started": len(progresses),
+                "first_stage": first_stage.id,
+            },
+            status=status.HTTP_200_OK,
         )

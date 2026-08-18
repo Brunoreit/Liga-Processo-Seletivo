@@ -14,13 +14,15 @@ class RecruitmentProcessSerializer(serializers.ModelSerializer):
             'registration_start',
             'registration_end',
             'published_at',
+            'started_at',
             'created_by',
         )
 
         read_only_fields = (
             'id',
             'published_at',
-            'created_by'
+            'started_at',
+            'created_by',
         )
 
     def validate(self, attrs):
@@ -59,6 +61,19 @@ class RecruitmentProcessSerializer(serializers.ModelSerializer):
                     {
                         "status": (
                             "Transição de status inválida"
+                        )
+                    }
+                )
+
+            if (
+                current_status == RecruitmentProcess.Status.DRAFT
+                and new_status == RecruitmentProcess.Status.PUBLISHED
+                and not self.instance.stages.exists()
+            ):
+                raise serializers.ValidationError(
+                    {
+                        "status": (
+                            "O processo seletivo precisa ter pelo menos uma etapa antes de ser publicado."
                         )
                     }
                 )

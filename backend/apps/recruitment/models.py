@@ -23,6 +23,8 @@ class RecruitmentProcess(models.Model):
 
     published_at = models.DateTimeField(null=True, blank=True)
 
+    started_at = models.DateTimeField(null=True, blank=True)
+
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -74,6 +76,8 @@ class Application(models.Model):
     class Status(models.TextChoices):
         ACTIVE = "active", "Ativo"
         CANCELED = "canceled", "Cancelado"
+        APPROVED = "approved", "aprovado"
+        REJECTED = "rejected", "Reprovado"
 
     candidate = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -106,3 +110,52 @@ class Application(models.Model):
 
     def __str__(self):
         return f"{self.candidate} - {self.recruitment_process}"
+
+
+class StageProgress(models.Model):
+    class Status(models.TextChoices):
+        IN_REVIEW = "in_review", "Em análise"
+        APPROVED = "approved", "Aprovado"
+        REJECTED = "rejected", "Reprovado"
+
+    application = models.ForeignKey(
+        Application,
+        on_delete=models.CASCADE,
+        related_name="stage_progresses",
+    )
+
+    stage = models.ForeignKey(
+        Stage,
+        on_delete=models.PROTECT,
+        related_name="candidate_progresses",
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.IN_REVIEW,
+    )
+
+    entered_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    decided_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["application", "stage"],
+                name="unique_stage_progress_per_application_stage",
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.application} - "
+            f"{self.stage} - "
+            f"{self.status}"
+        )
