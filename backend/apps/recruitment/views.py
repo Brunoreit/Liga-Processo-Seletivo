@@ -3,7 +3,9 @@ from rest_framework.views import APIView
 from .models import RecruitmentProcess, Stage, Application, StageProgress
 from .permissions import IsStaffOrReadOnly
 from .serializers import (
+    AdminApplicationReadSerializer,
     ApplicationSerializer,
+    MyApplicationReadSerializer,
     RecruitmentProcessSerializer,
     StageProgressDecisionSerializer,
     StageSerializer,
@@ -15,6 +17,17 @@ from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework import status
 from django.db import transaction
+from django.db.models import Prefetch
+
+
+def stage_progress_prefetch():
+    return Prefetch(
+        "stage_progresses",
+        queryset=StageProgress.objects.select_related("stage").order_by(
+            "stage__order"
+        ),
+        to_attr="prefetched_stage_progresses",
+    )
 
 class RecruitmentProcessQueryMixin:
     #sobrescrevendo método
@@ -235,24 +248,30 @@ class ApplicationCancelView(APIView):
 
 
 class MyApplicationsView(generics.ListAPIView):
-    serializer_class = ApplicationSerializer
+    serializer_class = MyApplicationReadSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Application.objects.filter(
-            candidate=self.request.user
+        return (
+            Application.objects.filter(candidate=self.request.user)
+            .select_related("recruitment_process")
+            .prefetch_related(stage_progress_prefetch())
+            .order_by("-applied_at")
         )
 
 
 class ProcessApplicationsView(generics.ListAPIView):
-    serializer_class = ApplicationSerializer
+    serializer_class = AdminApplicationReadSerializer
     permission_classes = [IsAdminUser]
 
     def get_queryset(self):
         process_id = self.kwargs["process_id"]
 
-        return Application.objects.filter(
-            recruitment_process_id=process_id
+        return (
+            Application.objects.filter(recruitment_process_id=process_id)
+            .select_related("candidate")
+            .prefetch_related(stage_progress_prefetch())
+            .order_by("candidate__full_name", "id")
         )
 
 

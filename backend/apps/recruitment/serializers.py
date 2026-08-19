@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from apps.users.models import User
 from .models import RecruitmentProcess, Stage, Application, StageProgress
 from django.utils import timezone
 
@@ -366,3 +367,132 @@ class StageProgressDecisionSerializer(serializers.Serializer):
             StageProgress.Status.REJECTED,
         )
     )
+
+
+class StageSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stage
+        fields = (
+            "id",
+            "title",
+            "order",
+        )
+        read_only_fields = fields
+
+
+class StageProgressReadSerializer(serializers.ModelSerializer):
+    stage = StageSummarySerializer(read_only=True)
+
+    class Meta:
+        model = StageProgress
+        fields = (
+            "id",
+            "status",
+            "entered_at",
+            "decided_at",
+            "stage",
+        )
+        read_only_fields = fields
+
+
+class RecruitmentProcessSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RecruitmentProcess
+        fields = (
+            "id",
+            "title",
+            "status",
+            "registration_start",
+            "registration_end",
+            "started_at",
+        )
+        read_only_fields = fields
+
+
+class CandidateSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "full_name",
+            "email",
+            "phone",
+            "course",
+            "semester",
+            "linkedin",
+            "github",
+            "profile_picture",
+        )
+        read_only_fields = fields
+
+
+def serialize_current_progress(application, context):
+    progresses = getattr(application, "prefetched_stage_progresses", [])
+    current_progress = next(
+        (
+            progress
+            for progress in progresses
+            if progress.status == StageProgress.Status.IN_REVIEW
+        ),
+        None,
+    )
+
+    if current_progress is None:
+        return None
+
+    return StageProgressReadSerializer(
+        current_progress,
+        context=context,
+    ).data
+
+
+class MyApplicationReadSerializer(serializers.ModelSerializer):
+    recruitment_process = RecruitmentProcessSummarySerializer(read_only=True)
+    stage_progresses = StageProgressReadSerializer(
+        source="prefetched_stage_progresses",
+        many=True,
+        read_only=True,
+    )
+    current_progress = serializers.SerializerMethodField()
+
+    def get_current_progress(self, application):
+        return serialize_current_progress(application, self.context)
+
+    class Meta:
+        model = Application
+        fields = (
+            "id",
+            "status",
+            "applied_at",
+            "canceled_at",
+            "recruitment_process",
+            "stage_progresses",
+            "current_progress",
+        )
+        read_only_fields = fields
+
+
+class AdminApplicationReadSerializer(serializers.ModelSerializer):
+    candidate = CandidateSummarySerializer(read_only=True)
+    stage_progresses = StageProgressReadSerializer(
+        source="prefetched_stage_progresses",
+        many=True,
+        read_only=True,
+    )
+    current_progress = serializers.SerializerMethodField()
+
+    def get_current_progress(self, application):
+        return serialize_current_progress(application, self.context)
+
+    class Meta:
+        model = Application
+        fields = (
+            "id",
+            "candidate",
+            "status",
+            "applied_at",
+            "canceled_at",
+            "stage_progresses",
+            "current_progress",
+        )
+        read_only_fields = fields
