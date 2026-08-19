@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import RecruitmentProcess, Stage, Application
+from .models import RecruitmentProcess, Stage, Application, StageProgress
 from django.utils import timezone
 
 class RecruitmentProcessSerializer(serializers.ModelSerializer):
@@ -357,3 +357,12 @@ class ApplicationSerializer(serializers.ModelSerializer):
             return self.instance.recruitment_process
     
         return self.context.get("recruitment_process")
+
+
+class StageProgressDecisionSerializer(serializers.Serializer):
+    decision = serializers.ChoiceField(
+        choices=(
+            StageProgress.Status.APPROVED,
+            StageProgress.Status.REJECTED,
+        )
+    )

@@ -2,7 +2,12 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from .models import RecruitmentProcess, Stage, Application, StageProgress
 from .permissions import IsStaffOrReadOnly
-from .serializers import RecruitmentProcessSerializer, StageSerializer, ApplicationSerializer
+from .serializers import (
+    ApplicationSerializer,
+    RecruitmentProcessSerializer,
+    StageProgressDecisionSerializer,
+    StageSerializer,
+)
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
@@ -326,6 +331,95 @@ class RecruitmentProcessStartView(APIView):
                 "detail": "Processo seletivo iniciado com sucesso.",
                 "candidates_started": len(progresses),
                 "first_stage": first_stage.id,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class StageProgressDecisionView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, progress_id):
+        serializer = StageProgressDecisionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        with transaction.atomic():
+            progress = get_object_or_404(
+                StageProgress.objects.select_for_update().select_related("stage"),
+                pk=progress_id,
+            )
+            application = Application.objects.select_for_update().get(
+                pk=progress.application_id
+            )
+
+            if progress.status != StageProgress.Status.IN_REVIEW:
+                raise ValidationError(
+                    {"detail": "Apenas progressos em análise podem receber uma decisão."}
+                )
+
+            if application.status != Application.Status.ACTIVE:
+                raise ValidationError(
+                    {"detail": "A inscrição precisa estar ativa para receber uma decisão."}
+                )
+
+            if (
+                progress.stage.recruitment_process_id
+                != application.recruitment_process_id
+            ):
+                raise ValidationError(
+                    {
+                        "detail": (
+                            "A etapa e a inscrição devem pertencer ao mesmo "
+                            "processo seletivo."
+                        )
+                    }
+                )
+
+            decision = serializer.validated_data["decision"]
+            next_stage = None
+
+            if decision == StageProgress.Status.APPROVED:
+                next_stage = Stage.objects.filter(
+                    recruitment_process_id=progress.stage.recruitment_process_id,
+                    order__gt=progress.stage.order,
+                ).order_by("order").first()
+
+                if (
+                    next_stage is not None
+                    and StageProgress.objects.filter(
+                        application=application,
+                        stage=next_stage,
+                    ).exists()
+                ):
+                    raise ValidationError(
+                        {"detail": "Já existe progresso para a próxima etapa."}
+                    )
+
+            progress.status = decision
+            progress.decided_at = timezone.now()
+            progress.save(update_fields=["status", "decided_at"])
+
+            next_progress = None
+            if decision == StageProgress.Status.REJECTED:
+                application.status = Application.Status.REJECTED
+                application.save(update_fields=["status"])
+            elif next_stage is not None:
+                next_progress = StageProgress.objects.create(
+                    application=application,
+                    stage=next_stage,
+                    status=StageProgress.Status.IN_REVIEW,
+                )
+            else:
+                application.status = Application.Status.APPROVED
+                application.save(update_fields=["status"])
+
+        return Response(
+            {
+                "progress_id": progress.pk,
+                "decision": decision,
+                "application_status": application.status,
+                "next_stage_id": next_stage.pk if next_stage else None,
+                "next_progress_id": next_progress.pk if next_progress else None,
             },
             status=status.HTTP_200_OK,
         )

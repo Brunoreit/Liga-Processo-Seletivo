@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RecruitmentProcessListCreateView, RecruitmentProcessDetailView, StageListCreateView, StageDetailView, ApplicationCreateView, ApplicationCancelView, MyApplicationsView, ProcessApplicationsView, RecruitmentProcessStartView
+from .views import RecruitmentProcessListCreateView, RecruitmentProcessDetailView, StageListCreateView, StageDetailView, ApplicationCreateView, ApplicationCancelView, MyApplicationsView, ProcessApplicationsView, RecruitmentProcessStartView, StageProgressDecisionView
 
 urlpatterns = [
     path(
@@ -55,4 +55,10 @@ urlpatterns = [
     RecruitmentProcessStartView.as_view(),
     name="recruitment-process-start",
 ),
+
+    path(
+        "stage-progress/<int:progress_id>/decision/",
+        StageProgressDecisionView.as_view(),
+        name="stage-progress-decision",
+    ),
 ]
