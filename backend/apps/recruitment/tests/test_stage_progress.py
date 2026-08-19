@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import DatabaseError
 from django.urls import reverse
 from django.utils import timezone
@@ -13,6 +14,8 @@ class StageProgressDecisionTests(RecruitmentAPITestCase):
     def setUp(self):
         super().setUp()
         self.process = self.create_process()
+        self.process.started_at = timezone.now()
+        self.process.save(update_fields=["started_at"])
         self.application = Application.objects.create(
             candidate=self.candidate,
             recruitment_process=self.process,
@@ -28,6 +31,64 @@ class StageProgressDecisionTests(RecruitmentAPITestCase):
             stage=self.first_stage,
         )
         self.url = reverse("stage-progress-decision", args=[self.progress.pk])
+
+    def test_decision_requires_published_process(self):
+        self.process.status = RecruitmentProcess.Status.DRAFT
+        self.process.save(update_fields=["status"])
+        self.client.force_authenticate(self.staff)
+
+        response = self.client.post(
+            self.url, {"decision": "approved"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.progress.refresh_from_db()
+        self.assertEqual(self.progress.status, StageProgress.Status.IN_REVIEW)
+
+    def test_decision_requires_started_process(self):
+        self.process.started_at = None
+        self.process.save(update_fields=["started_at"])
+        self.client.force_authenticate(self.staff)
+
+        response = self.client.post(
+            self.url, {"decision": "approved"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.progress.refresh_from_db()
+        self.assertEqual(self.progress.status, StageProgress.Status.IN_REVIEW)
+
+    def test_decision_is_rejected_for_closed_process(self):
+        self.process.status = RecruitmentProcess.Status.CLOSED
+        self.process.save(update_fields=["status"])
+        self.client.force_authenticate(self.staff)
+
+        response = self.client.post(
+            self.url, {"decision": "approved"}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.progress.refresh_from_db()
+        self.application.refresh_from_db()
+        self.assertEqual(self.progress.status, StageProgress.Status.IN_REVIEW)
+        self.assertIsNone(self.progress.decided_at)
+        self.assertEqual(self.application.status, Application.Status.ACTIVE)
+
+    def test_model_clean_rejects_progress_from_different_process(self):
+        other_process = self.create_process()
+        other_stage = Stage.objects.create(
+            recruitment_process=other_process,
+            title="Other stage",
+            description="Other stage description",
+            order=1,
+        )
+        progress = StageProgress(
+            application=self.application,
+            stage=other_stage,
+        )
+
+        with self.assertRaises(DjangoValidationError):
+            progress.clean()
 
     def test_staff_can_approve_and_advance_to_next_stage_with_order_gap(self):
         next_stage = Stage.objects.create(
@@ -251,4 +312,3 @@ class StageProgressDecisionTests(RecruitmentAPITestCase):
         self.assertIsNone(self.progress.decided_at)
         self.assertEqual(self.application.status, Application.Status.ACTIVE)
         self.assertEqual(StageProgress.objects.count(), 1)
-

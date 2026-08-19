@@ -1,5 +1,7 @@
 from datetime import timedelta
+from unittest.mock import patch
 
+from django.db import DatabaseError
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -61,6 +63,123 @@ class RecruitmentProcessValidationTests(RecruitmentAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("registration_end", response.data)
+
+    def test_registration_dates_cannot_change_after_process_start(self):
+        process = self.create_process()
+        process.started_at = timezone.now()
+        process.save(update_fields=["started_at"])
+        self.client.force_authenticate(self.staff)
+        url = reverse("recruitment-process-detail", args=[process.pk])
+
+        for field, value in (
+            ("registration_start", process.registration_start - timedelta(hours=1)),
+            ("registration_end", process.registration_end + timedelta(hours=1)),
+        ):
+            with self.subTest(field=field):
+                response = self.client.patch(url, {field: value}, format="json")
+
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn(field, response.data)
+
+    def test_same_registration_dates_are_allowed_after_process_start(self):
+        process = self.create_process()
+        process.started_at = timezone.now()
+        process.save(update_fields=["started_at"])
+        self.client.force_authenticate(self.staff)
+
+        response = self.client.patch(
+            reverse("recruitment-process-detail", args=[process.pk]),
+            {
+                "registration_start": process.registration_start,
+                "registration_end": process.registration_end,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_process_cannot_close_before_start(self):
+        process = self.create_process()
+        self.client.force_authenticate(self.staff)
+
+        response = self.client.patch(
+            reverse("recruitment-process-detail", args=[process.pk]),
+            {"status": RecruitmentProcess.Status.CLOSED},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        process.refresh_from_db()
+        self.assertEqual(process.status, RecruitmentProcess.Status.PUBLISHED)
+
+    def test_process_cannot_close_with_active_application(self):
+        process = self.create_process()
+        process.started_at = timezone.now()
+        process.save(update_fields=["started_at"])
+        Application.objects.create(
+            candidate=self.candidate,
+            recruitment_process=process,
+        )
+        self.client.force_authenticate(self.staff)
+
+        response = self.client.patch(
+            reverse("recruitment-process-detail", args=[process.pk]),
+            {"status": RecruitmentProcess.Status.CLOSED},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        process.refresh_from_db()
+        self.assertEqual(process.status, RecruitmentProcess.Status.PUBLISHED)
+
+    def test_process_cannot_close_with_progress_in_review(self):
+        process = self.create_process()
+        process.started_at = timezone.now()
+        process.save(update_fields=["started_at"])
+        stage = Stage.objects.create(
+            recruitment_process=process,
+            title="Stage",
+            description="Stage description",
+            order=1,
+        )
+        application = Application.objects.create(
+            candidate=self.candidate,
+            recruitment_process=process,
+            status=Application.Status.REJECTED,
+        )
+        StageProgress.objects.create(application=application, stage=stage)
+        self.client.force_authenticate(self.staff)
+
+        response = self.client.patch(
+            reverse("recruitment-process-detail", args=[process.pk]),
+            {"status": RecruitmentProcess.Status.CLOSED},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        process.refresh_from_db()
+        self.assertEqual(process.status, RecruitmentProcess.Status.PUBLISHED)
+
+    def test_started_process_without_pending_applications_can_close(self):
+        process = self.create_process()
+        process.started_at = timezone.now()
+        process.save(update_fields=["started_at"])
+        Application.objects.create(
+            candidate=self.candidate,
+            recruitment_process=process,
+            status=Application.Status.APPROVED,
+        )
+        self.client.force_authenticate(self.staff)
+
+        response = self.client.patch(
+            reverse("recruitment-process-detail", args=[process.pk]),
+            {"status": RecruitmentProcess.Status.CLOSED},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        process.refresh_from_db()
+        self.assertEqual(process.status, RecruitmentProcess.Status.CLOSED)
 
 class RecruitmentProcessStartTests(RecruitmentAPITestCase):
     def create_startable_process(self):
@@ -157,3 +276,25 @@ class RecruitmentProcessStartTests(RecruitmentAPITestCase):
         self.assertEqual(first_response.status_code, status.HTTP_200_OK)
         self.assertEqual(second_response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_start_is_atomic_when_progress_creation_fails(self):
+        process = self.create_startable_process()
+        Application.objects.create(
+            candidate=self.candidate,
+            recruitment_process=process,
+        )
+        self.client.force_authenticate(self.staff)
+
+        with patch(
+            "apps.recruitment.views.StageProgress.objects.bulk_create",
+            side_effect=DatabaseError("forced failure"),
+        ):
+            with self.assertRaises(DatabaseError):
+                self.client.post(
+                    reverse("recruitment-process-start", args=[process.pk]),
+                    {},
+                    format="json",
+                )
+
+        process.refresh_from_db()
+        self.assertIsNone(process.started_at)
+        self.assertFalse(StageProgress.objects.exists())

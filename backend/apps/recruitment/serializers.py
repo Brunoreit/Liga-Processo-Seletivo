@@ -98,6 +98,55 @@ class RecruitmentProcessSerializer(serializers.ModelSerializer):
                     }
                 )
 
+            if (
+                current_status == RecruitmentProcess.Status.PUBLISHED
+                and new_status == RecruitmentProcess.Status.CLOSED
+            ):
+                if self.instance.started_at is None:
+                    raise serializers.ValidationError(
+                        {
+                            "status": (
+                                "O processo seletivo precisa ter sido iniciado "
+                                "antes de ser encerrado."
+                            )
+                        }
+                    )
+
+                if self.instance.applications.filter(
+                    status=Application.Status.ACTIVE
+                ).exists():
+                    raise serializers.ValidationError(
+                        {
+                            "status": (
+                                "O processo seletivo possui inscrições ativas."
+                            )
+                        }
+                    )
+
+                if StageProgress.objects.filter(
+                    application__recruitment_process=self.instance,
+                    status=StageProgress.Status.IN_REVIEW,
+                ).exists():
+                    raise serializers.ValidationError(
+                        {
+                            "status": (
+                                "O processo seletivo possui progressos em análise."
+                            )
+                        }
+                    )
+
+        if self.instance is not None and self.instance.started_at is not None:
+            for field in ("registration_start", "registration_end"):
+                if field in attrs and attrs[field] != getattr(self.instance, field):
+                    raise serializers.ValidationError(
+                        {
+                            field: (
+                                "As datas de inscrição não podem ser alteradas "
+                                "após o início do processo seletivo."
+                            )
+                        }
+                    )
+
         return attrs
 
     # sobrescrever método
@@ -185,6 +234,16 @@ class StageSerializer(serializers.ModelSerializer):
 
 
          process_status = self.instance.recruitment_process.status
+
+         if self.instance.recruitment_process.started_at is not None:
+             raise serializers.ValidationError(
+                 {
+                     "detail": (
+                         "Etapas não podem ser alteradas após o início do "
+                         "processo seletivo."
+                     )
+                 }
+             )
 
          if process_status == RecruitmentProcess.Status.CLOSED:
              raise serializers.ValidationError(

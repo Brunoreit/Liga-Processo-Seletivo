@@ -85,3 +85,14 @@ class ApplicationStatusTests(RecruitmentAPITestCase):
                 self.assertEqual(application.status, application_status)
                 application.delete()
 
+    def test_application_cannot_be_canceled_after_process_start(self):
+        application = self.create_application(Application.Status.ACTIVE)
+        self.process.started_at = timezone.now()
+        self.process.save(update_fields=["started_at"])
+
+        response = self.client.post(self.cancel_url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        application.refresh_from_db()
+        self.assertEqual(application.status, Application.Status.ACTIVE)
+        self.assertIsNone(application.canceled_at)

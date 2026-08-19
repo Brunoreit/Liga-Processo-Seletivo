@@ -71,6 +71,24 @@ class RecruitmentProcessDetailView(RecruitmentProcessQueryMixin, generics.Retrie
     serializer_class = RecruitmentProcessSerializer
     permission_classes = [IsStaffOrReadOnly]
 
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+
+        with transaction.atomic():
+            instance = get_object_or_404(
+                self.get_queryset().select_for_update(),
+                pk=kwargs["pk"],
+            )
+            serializer = self.get_serializer(
+                instance,
+                data=request.data,
+                partial=partial,
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+        return Response(serializer.data)
+
     #sobrescrevendo método
     def perform_destroy(self, instance):
         if (instance.status != RecruitmentProcess.Status.DRAFT):
@@ -93,21 +111,32 @@ class StageListCreateView(StageMixin, generics.ListCreateAPIView):
     def perform_create(self, serializer):
         process_id = self.kwargs["process_id"]
 
-        process = get_object_or_404(
-            RecruitmentProcess,
-            pk=process_id
-        )
-
-        if process.status != RecruitmentProcess.Status.DRAFT:
-            raise ValidationError(
-                {
-                    "detail":(
-                        "Etapas só pode ser adicionadas enquanto o processo seletivo estiver em rascunho."
-                    )
-                }
+        with transaction.atomic():
+            process = get_object_or_404(
+                RecruitmentProcess.objects.select_for_update(),
+                pk=process_id,
             )
 
-        serializer.save(recruitment_process=process)
+            if process.started_at is not None:
+                raise ValidationError(
+                    {
+                        "detail": (
+                            "Etapas não podem ser criadas após o início do "
+                            "processo seletivo."
+                        )
+                    }
+                )
+
+            if process.status != RecruitmentProcess.Status.DRAFT:
+                raise ValidationError(
+                    {
+                        "detail":(
+                            "Etapas só pode ser adicionadas enquanto o processo seletivo estiver em rascunho."
+                        )
+                    }
+                )
+
+            serializer.save(recruitment_process=process)
 
     #sobrescrever método
     def get_serializer_context(self):
@@ -129,17 +158,50 @@ class StageDetailView(StageMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class = StageSerializer
     permission_classes = [IsStaffOrReadOnly]
 
-    def perform_destroy(self, instance):
-        if instance.recruitment_process.status != instance.recruitment_process.Status.DRAFT :
-            raise ValidationError(
-                {
-                    "detail": (
-                        "Etapas só podem ser excluídas enquanto o processo seletivo estiver em rascunho"
-                    )
-                }
+    def perform_update(self, serializer):
+        with transaction.atomic():
+            process = RecruitmentProcess.objects.select_for_update().get(
+                pk=serializer.instance.recruitment_process_id
             )
-        
-        instance.delete()
+
+            if process.started_at is not None:
+                raise ValidationError(
+                    {
+                        "detail": (
+                            "Etapas não podem ser alteradas após o início do "
+                            "processo seletivo."
+                        )
+                    }
+                )
+
+            serializer.save()
+
+    def perform_destroy(self, instance):
+        with transaction.atomic():
+            process = RecruitmentProcess.objects.select_for_update().get(
+                pk=instance.recruitment_process_id
+            )
+
+            if process.started_at is not None:
+                raise ValidationError(
+                    {
+                        "detail": (
+                            "Etapas não podem ser excluídas após o início do "
+                            "processo seletivo."
+                        )
+                    }
+                )
+
+            if process.status != RecruitmentProcess.Status.DRAFT:
+                raise ValidationError(
+                    {
+                        "detail": (
+                            "Etapas só podem ser excluídas enquanto o processo seletivo estiver em rascunho"
+                        )
+                    }
+                )
+
+            instance.delete()
 
 
 
@@ -212,32 +274,48 @@ class ApplicationCancelView(APIView):
     def post(self, request, process_id):
         candidate = request.user
 
-        application = Application.objects.filter(
-            recruitment_process_id=process_id,
-            candidate=candidate,
-        ).first()
-
-        if application is None:
-            raise ValidationError(
-                {
-                    "detail": (
-                        "Você não pode cancelar uma inscrição em um processo no qual não está inscrito."
-                    )
-                }
+        with transaction.atomic():
+            process = get_object_or_404(
+                RecruitmentProcess.objects.select_for_update(),
+                pk=process_id,
             )
 
-        if application.status != Application.Status.ACTIVE:
-            raise ValidationError(
-                {
-                    "detail": (
-                        "Apenas inscrições ativas podem ser canceladas."
-                    )
-                }
-            )
+            if process.started_at is not None:
+                raise ValidationError(
+                    {
+                        "detail": (
+                            "A inscrição não pode ser cancelada após o início "
+                            "do processo seletivo."
+                        )
+                    }
+                )
 
-        application.status = Application.Status.CANCELED
-        application.canceled_at = timezone.now()
-        application.save(update_fields=["status", "canceled_at"])
+            application = Application.objects.select_for_update().filter(
+                recruitment_process=process,
+                candidate=candidate,
+            ).first()
+
+            if application is None:
+                raise ValidationError(
+                    {
+                        "detail": (
+                            "Você não pode cancelar uma inscrição em um processo no qual não está inscrito."
+                        )
+                    }
+                )
+
+            if application.status != Application.Status.ACTIVE:
+                raise ValidationError(
+                    {
+                        "detail": (
+                            "Apenas inscrições ativas podem ser canceladas."
+                        )
+                    }
+                )
+
+            application.status = Application.Status.CANCELED
+            application.canceled_at = timezone.now()
+            application.save(update_fields=["status", "canceled_at"])
 
         serializer = ApplicationSerializer(application)
 
@@ -280,57 +358,51 @@ class RecruitmentProcessStartView(APIView):
     permission_classes = [IsAdminUser]
 
     def post(self, request, process_id):
-        process = get_object_or_404(
-            RecruitmentProcess,
-            pk=process_id,
-        )
-
-        now = timezone.now()
-
-        if process.status != RecruitmentProcess.Status.PUBLISHED:
-            raise ValidationError(
-                {
-                    "detail": (
-                        "O processo seletivo precisa estar publicado para ser iniciado."
-                    )
-                }
-            )
-
-        if now <= process.registration_end:
-            raise ValidationError(
-                {
-                    "detail": (
-                        "O processo seletivo só pode ser iniciado após o encerramento das inscrições."
-                    )
-                }
-            )
-
-        if process.started_at is not None:
-            raise ValidationError(
-                {
-                    "detail": (
-                        "Este processo seletivo já foi iniciado."
-                    )
-                }
-            )
-
-        first_stage = process.stages.order_by("order").first()
-
-        if first_stage is None:
-            raise ValidationError(
-                {
-                    "detail": (
-                        "O processo seletivo não possui etapas configuradas."
-                    )
-                }
-            )
-
-        applications = Application.objects.filter(
-            recruitment_process=process,
-            status=Application.Status.ACTIVE,
-        )
-
         with transaction.atomic():
+            process = get_object_or_404(
+                RecruitmentProcess.objects.select_for_update(),
+                pk=process_id,
+            )
+            now = timezone.now()
+
+            if process.status != RecruitmentProcess.Status.PUBLISHED:
+                raise ValidationError(
+                    {
+                        "detail": (
+                            "O processo seletivo precisa estar publicado para ser iniciado."
+                        )
+                    }
+                )
+
+            if now <= process.registration_end:
+                raise ValidationError(
+                    {
+                        "detail": (
+                            "O processo seletivo só pode ser iniciado após o encerramento das inscrições."
+                        )
+                    }
+                )
+
+            if process.started_at is not None:
+                raise ValidationError(
+                    {"detail": "Este processo seletivo já foi iniciado."}
+                )
+
+            first_stage = process.stages.order_by("order").first()
+
+            if first_stage is None:
+                raise ValidationError(
+                    {
+                        "detail": (
+                            "O processo seletivo não possui etapas configuradas."
+                        )
+                    }
+                )
+
+            applications = Application.objects.filter(
+                recruitment_process=process,
+                status=Application.Status.ACTIVE,
+            )
             progresses = [
                 StageProgress(
                     application=application,
@@ -362,7 +434,15 @@ class StageProgressDecisionView(APIView):
         serializer = StageProgressDecisionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        progress_process_id = get_object_or_404(
+            StageProgress.objects.select_related("stage"),
+            pk=progress_id,
+        ).stage.recruitment_process_id
+
         with transaction.atomic():
+            process = RecruitmentProcess.objects.select_for_update().get(
+                pk=progress_process_id
+            )
             progress = get_object_or_404(
                 StageProgress.objects.select_for_update().select_related("stage"),
                 pk=progress_id,
@@ -370,6 +450,31 @@ class StageProgressDecisionView(APIView):
             application = Application.objects.select_for_update().get(
                 pk=progress.application_id
             )
+
+            if progress.stage.recruitment_process_id != process.pk:
+                raise ValidationError(
+                    {"detail": "O processo seletivo do progresso foi alterado."}
+                )
+
+            if process.status != RecruitmentProcess.Status.PUBLISHED:
+                raise ValidationError(
+                    {
+                        "detail": (
+                            "Decisões só podem ser tomadas em processos seletivos "
+                            "publicados."
+                        )
+                    }
+                )
+
+            if process.started_at is None:
+                raise ValidationError(
+                    {
+                        "detail": (
+                            "O processo seletivo precisa ter sido iniciado para "
+                            "receber decisões."
+                        )
+                    }
+                )
 
             if progress.status != StageProgress.Status.IN_REVIEW:
                 raise ValidationError(

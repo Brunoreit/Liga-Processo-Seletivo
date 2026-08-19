@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -152,6 +153,24 @@ class StageProgress(models.Model):
                 name="unique_stage_progress_per_application_stage",
             )
         ]
+
+    def clean(self):
+        super().clean()
+
+        if (
+            self.application_id
+            and self.stage_id
+            and self.application.recruitment_process_id
+            != self.stage.recruitment_process_id
+        ):
+            raise ValidationError(
+                {
+                    "stage": (
+                        "A etapa e a inscrição devem pertencer ao mesmo "
+                        "processo seletivo."
+                    )
+                }
+            )
 
     def __str__(self):
         return (
